@@ -1,52 +1,38 @@
 /* ------------------------------------------------- */
 
 #include <Arduino.h>
-
-#if defined(ARDUINO_ARCH_ESP8266)
-#include <ESP8266WiFi.h>
-#include <ESP8266WebServer.h>
-#elif defined(ARDUINO_ARCH_ESP32)
-#include <WiFi.h>
-#include <WebServer.h>
-#endif
-//#include <time.h>
-//#include <PageBuilder.h>
 #include <AutoConnect.h>
+#include <ESPTelnet.h>
+#include <WebServer.h>
+#include <WiFi.h>
 
-#if defined(ARDUINO_ARCH_ESP8266)
-ESP8266WebServer Server;
-#elif defined(ARDUINO_ARCH_ESP32)
-WebServer Server;
-#endif
+#define SERIAL_SPEED 115200
 
+WebServer   Server;
 AutoConnect Portal(Server);
-//AutoConnectConfig Config;       // Enable autoReconnect supported on v0.9.4
-//AutoConnectAux    Timezone;
-
-#include "ESPTelnet.h"
-
-/* ------------------------------------------------- */
-
-#define SERIAL_SPEED  115200
-#define WIFI_SSID     "MY SSID"
-#define WIFI_PASSWORD "MY PASS"
-
-/* ------------------------------------------------- */
-
-ESPTelnet telnet;
-IPAddress ip;
+ESPTelnet   telnet;
+IPAddress   ip;
 
 /* ------------------------------------------------- */
 
 void rootPage() {
-  char content[] = "Hello, world";
+  char content[] = "Welcom to ATOM Lite";
   Server.send(200, "text/plain", content);
 }
 
-void setupSerial(long speed, String msg = "") {
-  Serial.begin(speed);
+void setupSerial1(long speed, String msg = "") {
+  Serial.begin(speed, SERIAL_8N1);
+  Serial1.begin(speed, SERIAL_8N1, 32, 26);
   while (!Serial) {
   }
+
+  Serial.flush();
+
+  while (!Serial1) {
+  }
+
+  Serial1.flush();
+
   delay(200);
   Serial.println();
   Serial.println();
@@ -59,31 +45,10 @@ bool isConnected() {
   return (WiFi.status() == WL_CONNECTED);
 }
 
-/* ------------------------------------------------- */
-
-bool connectToWiFi(const char* ssid, const char* password, int max_tries = 20, int pause = 500) {
-  int i = 0;
-  WiFi.mode(WIFI_STA);
-#if defined(ARDUINO_ARCH_ESP8266)
-  WiFi.forceSleepWake();
-  delay(200);
-#endif
-  WiFi.begin(ssid, password);
-  do {
-    delay(pause);
-    Serial.print(".");
-  } while (!isConnected() || i++ < max_tries);
-  WiFi.setAutoReconnect(true);
-  WiFi.persistent(true);
-  return isConnected();
-}
-
-/* ------------------------------------------------- */
-
 void errorMsg(String error, bool restart = true) {
-  Serial.println(error);
+  Serial1.println(error);
   if (restart) {
-    Serial.println("Rebooting now...");
+    Serial1.println("Rebooting now...");
     delay(2000);
     ESP.restart();
     delay(2000);
@@ -94,29 +59,29 @@ void errorMsg(String error, bool restart = true) {
 
 // (optional) callback functions for telnet events
 void onTelnetConnect(String ip) {
-  Serial.print("- Telnet: ");
-  Serial.print(ip);
-  Serial.println(" connected");
+  Serial1.print("- Telnet: ");
+  Serial1.print(ip);
+  Serial1.println(" connected");
   telnet.println("\nWelcome " + telnet.getIP());
   telnet.println("(Use ^] + q  to disconnect.)");
 }
 
 void onTelnetDisconnect(String ip) {
-  Serial.print("- Telnet: ");
-  Serial.print(ip);
-  Serial.println(" disconnected");
+  Serial1.print("- Telnet: ");
+  Serial1.print(ip);
+  Serial1.println(" disconnected");
 }
 
 void onTelnetReconnect(String ip) {
-  Serial.print("- Telnet: ");
-  Serial.print(ip);
-  Serial.println(" reconnected");
+  Serial1.print("- Telnet: ");
+  Serial1.print(ip);
+  Serial1.println(" reconnected");
 }
 
 void onTelnetConnectionAttempt(String ip) {
-  Serial.print("- Telnet: ");
-  Serial.print(ip);
-  Serial.println(" tried to connected");
+  Serial1.print("- Telnet: ");
+  Serial1.print(ip);
+  Serial1.println(" tried to connected");
 }
 
 /* ------------------------------------------------- */
@@ -130,18 +95,15 @@ void setupTelnet() {
 
   // passing a lambda function
   telnet.onInputReceived([](String str) {
-    // checks for a certain command
-    if (str == "ping") {
-      telnet.println("> pong");
-      Serial.println("- Telnet: pong");
-    }
+    Serial.print(str + "\n");
+    Serial1.print(str + "\n");
   });
 
-  Serial.print("- Telnet: ");
+  Serial1.print("- Telnet: ");
   if (telnet.begin()) {
-    Serial.println("running");
+    Serial1.println("running");
   } else {
-    Serial.println("error.");
+    Serial1.println("error.");
     errorMsg("Will reboot...");
   }
 }
@@ -149,28 +111,17 @@ void setupTelnet() {
 /* ------------------------------------------------- */
 
 void setup() {
-  setupSerial(SERIAL_SPEED, "Telnet Test");
+  setupSerial1(SERIAL_SPEED, "Telnet Test");
 
   Server.on("/", rootPage);
   if (Portal.begin()) {
-    Serial.println("WiFi connected: " + WiFi.localIP().toString());
+    ip = WiFi.localIP();
+    Serial1.println("WiFi connected: " + WiFi.localIP().toString());
     setupTelnet();
   } else {
-    Serial.println();
+    Serial1.println();
     errorMsg("Error connecting to WiFi");
   }
-
-  //Serial.print("- Wifi: ");
-  //connectToWiFi(WIFI_SSID, WIFI_PASSWORD);
-  // if (isConnected()) {
-  //   ip = WiFi.localIP();
-  //   Serial.print(" ");
-  //   Serial.println(ip);
-  //   setupTelnet();
-  // } else {
-  //   Serial.println();
-  //   errorMsg("Error connecting to WiFi");
-  // }
 }
 
 /* ------------------------------------------------- */
@@ -179,9 +130,9 @@ void loop() {
   Portal.handleClient();
   telnet.loop();
 
-  // send serial input to telnet as output
-  if (Serial.available()) {
-    telnet.print(Serial.read());
+  // send Serial1 input to telnet as output
+  if (Serial1.available()) {
+    telnet.print(Serial1.read());
   }
 }
 //* ------------------------------------------------- */
