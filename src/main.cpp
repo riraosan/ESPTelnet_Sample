@@ -8,8 +8,8 @@
 
 #define SERIAL_SPEED 115200
 
-WebServer   Server;
-AutoConnect Portal(Server);
+WebServer   server;
+AutoConnect portal(server);
 ESPTelnet   telnet;
 IPAddress   ip;
 
@@ -17,20 +17,14 @@ IPAddress   ip;
 
 void rootPage() {
   char content[] = "Welcom to ATOM Lite";
-  Server.send(200, "text/plain", content);
+  server.send(200, "text/plain", content);
 }
 
 void setupSerial1(long speed, String msg = "") {
   Serial.begin(speed, SERIAL_8N1);
   Serial1.begin(speed, SERIAL_8N1, 32, 26);
-  while (!Serial) {
-  }
 
   Serial.flush();
-
-  while (!Serial1) {
-  }
-
   Serial1.flush();
 
   delay(200);
@@ -93,15 +87,10 @@ void setupTelnet() {
   telnet.onReconnect(onTelnetReconnect);
   telnet.onDisconnect(onTelnetDisconnect);
 
-  // passing a lambda function
-  telnet.onInputReceived([](String str) {
-    Serial.print(str + "\n");
-    Serial1.print(str + "\n");
-  });
-
   Serial1.print("- Telnet: ");
   if (telnet.begin()) {
     Serial1.println("running");
+
   } else {
     Serial1.println("error.");
     errorMsg("Will reboot...");
@@ -113,8 +102,8 @@ void setupTelnet() {
 void setup() {
   setupSerial1(SERIAL_SPEED, "Telnet Test");
 
-  Server.on("/", rootPage);
-  if (Portal.begin()) {
+  server.on("/", rootPage);
+  if (portal.begin()) {
     ip = WiFi.localIP();
     Serial1.println("WiFi connected: " + WiFi.localIP().toString());
     setupTelnet();
@@ -127,12 +116,17 @@ void setup() {
 /* ------------------------------------------------- */
 
 void loop() {
-  Portal.handleClient();
+  portal.handleClient();
   telnet.loop();
 
   // send Serial1 input to telnet as output
   if (Serial1.available()) {
     telnet.print(Serial1.read());
+  }
+
+  // send telnet input to Serial as output
+  if (telnet.available()) {
+    Serial1.print(telnet.read());
   }
 }
 //* ------------------------------------------------- */
