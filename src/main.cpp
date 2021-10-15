@@ -120,7 +120,7 @@ void loop() {
   telnet.loop();
 
   if (Serial1.available() > 0) {
-    telnet.println(Serial1.readString());
+    telnet.print(Serial1.readString());
   }
 
   if (telnet.available() > 0) {
