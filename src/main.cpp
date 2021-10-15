@@ -119,14 +119,18 @@ void loop() {
   portal.handleClient();
   telnet.loop();
 
-  // send Serial1 input to telnet as output
-  if (Serial1.available()) {
-    telnet.print(Serial1.read());
+  if (Serial1.available() > 0) {
+    telnet.println(Serial1.readString());
   }
 
-  // send telnet input to Serial as output
-  if (telnet.available()) {
-    Serial1.print(telnet.read());
+  if (telnet.available() > 0) {
+#if defined(DEBUG)
+    String input(telnet.readString());
+    Serial1.print(input);
+    Serial.print(input);
+#else
+    Serial1.print(telnet.readString());
+#endif
   }
 }
 //* ------------------------------------------------- */
