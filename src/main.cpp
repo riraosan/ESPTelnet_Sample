@@ -100,7 +100,7 @@ void setupTelnet() {
 /* ------------------------------------------------- */
 
 void setup() {
-  setupSerial1(SERIAL_SPEED, "Telnet Test");
+  setupSerial1(SERIAL_SPEED, "Serial-Telnet Bridge via WiFi");
 
   server.on("/", rootPage);
   if (portal.begin()) {
@@ -124,13 +124,7 @@ void loop() {
   }
 
   if (telnet.available() > 0) {
-#if defined(DEBUG)
-    String input(telnet.readString());
-    Serial1.print(input);
-    Serial.print(input);
-#else
     Serial1.print(telnet.readString());
-#endif
   }
 }
 //* ------------------------------------------------- */
