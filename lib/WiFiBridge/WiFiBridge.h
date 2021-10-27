@@ -38,7 +38,7 @@ class WiFiBridge {
   void errorMsg(String error, bool restart = true) {
     Serial1.println(error);
     if (restart) {
-      Serial1.println("Rebooting now...");
+      Serial.println("Rebooting now...");
       delay(2000);
       ESP.restart();
       delay(2000);
@@ -46,29 +46,29 @@ class WiFiBridge {
   }
 
   static void onTelnetConnect(String ip) {
-    Serial1.print("- Telnet: ");
-    Serial1.print(ip);
-    Serial1.println(" connected");
-    _telnet.println("\nWelcome " + _telnet.getIP());
+    Serial.print("- Telnet: ");
+    Serial.print(ip);
+    Serial.println(" connected");
+    _telnet.println("\nWelcome. Your IP address is " + _telnet.getIP());
     _telnet.println("(Use ^] + q  to disconnect.)");
   }
 
   static void onTelnetDisconnect(String ip) {
-    Serial1.print("- Telnet: ");
-    Serial1.print(ip);
-    Serial1.println(" disconnected");
+    Serial.print("- Telnet: ");
+    Serial.print(ip);
+    Serial.println(" disconnected");
   }
 
   static void onTelnetReconnect(String ip) {
-    Serial1.print("- Telnet: ");
-    Serial1.print(ip);
-    Serial1.println(" reconnected");
+    Serial.print("- Telnet: ");
+    Serial.print(ip);
+    Serial.println(" reconnected");
   }
 
   static void onTelnetConnectionAttempt(String ip) {
-    Serial1.print("- Telnet: ");
-    Serial1.print(ip);
-    Serial1.println(" tried to connected");
+    Serial.print("- Telnet: ");
+    Serial.print(ip);
+    Serial.println(" tried to connected");
   }
 
   void setupTelnet() {
@@ -78,13 +78,12 @@ class WiFiBridge {
     _telnet.onReconnect(onTelnetReconnect);
     _telnet.onDisconnect(onTelnetDisconnect);
 
-    Serial1.print("- Telnet: ");
+    Serial.print("- Telnet: ");
     if (_telnet.begin()) {
-      Serial1.println("running");
-
+      Serial.println("running");
     } else {
-      Serial1.println("error.");
-      errorMsg("Will reboot...");
+      Serial.println("error.");
+      errorMsg("Will reboot...", true);
     }
   }
 
@@ -92,12 +91,13 @@ class WiFiBridge {
     setupSerial1(speed, config, rxPin, txPin, "Serial-Telnet Bridge via WiFi");
 
     _server.on("/", rootPage);
+
     if (_portal.begin()) {
       _ip = WiFi.localIP();
-      Serial1.println("WiFi connected: " + WiFi.localIP().toString());
+      Serial.println("WiFi connected: " + WiFi.localIP().toString());
       setupTelnet();
     } else {
-      Serial1.println();
+      Serial.println();
       errorMsg("Error connecting to WiFi");
     }
   }
