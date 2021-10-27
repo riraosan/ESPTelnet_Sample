@@ -14,7 +14,7 @@ class WiFiBridge {
   ~WiFiBridge() {}
 
   static void rootPage() {
-    char content[] = "Welcom to ATOM Lite";
+    char content[] = "Welcome to ATOM Lite";
     _server.send(200, "text/plain", content);
   }
 
@@ -49,8 +49,11 @@ class WiFiBridge {
     Serial.print("- Telnet: ");
     Serial.print(ip);
     Serial.println(" connected");
+
     _telnet.println("\nWelcome. Your IP address is " + _telnet.getIP());
     _telnet.println("(Use ^] + q  to disconnect.)");
+
+    Serial1.println("");
   }
 
   static void onTelnetDisconnect(String ip) {
@@ -107,11 +110,11 @@ class WiFiBridge {
     _telnet.loop();
 
     if (Serial1.available() > 0) {
-      _telnet.print(Serial1.readString());
+      _telnet.print(Serial1.readStringUntil('\n'));
     }
 
     if (_telnet.available() > 0) {
-      Serial1.print(_telnet.readString());
+      Serial1.print(_telnet.readStringUntil('\n'));
     }
   }
 
