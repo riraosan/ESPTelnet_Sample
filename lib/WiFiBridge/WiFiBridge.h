@@ -11,97 +11,50 @@ class WiFiBridge {
   WiFiBridge() : _portal(_server) {
   }
 
-  ~WiFiBridge() {}
-
-  static void rootPage() {
-    char content[] = "Welcome to ATOM Lite";
-    _server.send(200, "text/plain", content);
-  }
-
   void setupSerial1(long speed, uint32_t config, int8_t rxPin, int8_t txPin, String msg = "") {
-    Serial.begin(speed, config);
     Serial1.begin(speed, config, rxPin, txPin);
-
-    Serial.flush();
     Serial1.flush();
-
-    delay(200);
-    Serial.println();
-    Serial.println();
-    if (msg != "") Serial.println(msg);
+    delay(500);
   }
 
   bool isConnected() {
     return (WiFi.status() == WL_CONNECTED);
   }
 
-  void errorMsg(String error, bool restart = true) {
-    Serial1.println(error);
-    if (restart) {
-      Serial.println("Rebooting now...");
-      delay(2000);
-      ESP.restart();
-      delay(2000);
-    }
-  }
-
-  static void onTelnetConnect(String ip) {
-    Serial.print("- Telnet: ");
-    Serial.print(ip);
-    Serial.println(" connected");
-
-    _telnet.println("\nWelcome. Your IP address is " + _telnet.getIP());
-    _telnet.println("(Use ^] + q  to disconnect.)");
-
-    Serial1.println("");
-  }
-
-  static void onTelnetDisconnect(String ip) {
-    Serial.print("- Telnet: ");
-    Serial.print(ip);
-    Serial.println(" disconnected");
-  }
-
-  static void onTelnetReconnect(String ip) {
-    Serial.print("- Telnet: ");
-    Serial.print(ip);
-    Serial.println(" reconnected");
-  }
-
-  static void onTelnetConnectionAttempt(String ip) {
-    Serial.print("- Telnet: ");
-    Serial.print(ip);
-    Serial.println(" tried to connected");
-  }
-
   void setupTelnet() {
-    // passing on functions for various telnet events
-    _telnet.onConnect(onTelnetConnect);
-    _telnet.onConnectionAttempt(onTelnetConnectionAttempt);
-    _telnet.onReconnect(onTelnetReconnect);
-    _telnet.onDisconnect(onTelnetDisconnect);
+    _telnet.onConnect([this](String ip) {
+      _telnet.println("\nWelcome. Your IP address is " + ip);
+    });
 
-    Serial.print("- Telnet: ");
-    if (_telnet.begin()) {
-      Serial.println("running");
-    } else {
-      Serial.println("error.");
-      errorMsg("Will reboot...", true);
+    _telnet.onConnectionAttempt([this](String ip) {
+      Serial1.println("- Telnet: " + ip + " tried to connected");
+    });
+
+    _telnet.onReconnect([this](String ip) {
+      Serial1.println("- Telnet: " + ip + " reconnected");
+    });
+
+    _telnet.onDisconnect([this](String ip) {
+      Serial1.println("- Telnet: " + ip + " disconnected");
+    });
+
+    if (!_telnet.begin()) {
+      ESP.restart();
     }
   }
 
-  void setup(unsigned long speed, uint32_t config = SERIAL_8N1, int8_t rxPin = 32, int8_t txPin = 26) {
-    setupSerial1(speed, config, rxPin, txPin, "Serial-Telnet Bridge via WiFi");
+  void begin(unsigned long speed, int8_t rxPin = 32, int8_t txPin = 26, uint32_t config = SERIAL_8N1) {
+    setupSerial1(speed, config, rxPin, txPin);
 
-    _server.on("/", rootPage);
+    _server.on("/", [this]() {
+      char content[] = "Welcome to ATOM Lite";
+      _server.send(200, "text/plain", content);
+    });
 
     if (_portal.begin()) {
-      _ip = WiFi.localIP();
-      Serial.println("WiFi connected: " + WiFi.localIP().toString());
       setupTelnet();
     } else {
-      Serial.println();
-      errorMsg("Error connecting to WiFi");
+      ESP.restart();
     }
   }
 
@@ -119,11 +72,7 @@ class WiFiBridge {
   }
 
  private:
-  static WebServer _server;
-  static ESPTelnet _telnet;
-  IPAddress        _ip;
-  AutoConnect      _portal;
+  WebServer   _server;
+  ESPTelnet   _telnet;
+  AutoConnect _portal;
 };
-
-WebServer WiFiBridge::_server;
-ESPTelnet WiFiBridge::_telnet;
